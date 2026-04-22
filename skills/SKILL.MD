@@ -7,6 +7,41 @@
 
 ---
 
+## Zero-config usage
+
+No scripts, no API key, no installation. Use this system in any AI chat window with nothing but this file and a template.
+
+**Step 1 — Open this file and a template in your AI chat**
+
+Paste the contents of `SKILL.MD` (this file) into any AI chat window (ChatGPT, Claude.ai, Gemini, Copilot Chat, etc.). Then paste the contents of the relevant template from `assets/templates/` (see the routing table below to pick the right one).
+
+**Step 2 — Tell the AI what you want to write**
+
+```
+Use the following template to write an article. Here is the source content: [paste content]
+
+Intent: [what you want to write, e.g. "analytical piece on staking economics for Chinese Web3 developers"]
+```
+
+**Step 3 — Paste your source material**
+
+Paste the source content directly into the chat:
+- Web article / blog post — paste the article text
+- YouTube video — paste the transcript text (copy from youtube.com/watch → "..." → "Show transcript", or use `youtube-transcript-api` locally)
+- Twitter/X thread — paste the thread text
+
+The AI will follow the three-step workflow: generate snippets → produce an English outline for your review → write the Chinese article.
+
+**Supported source types (all work in zero-config mode):**
+
+| Source | How to get the text |
+|--------|---------------------|
+| Any webpage / blog | Copy and paste the article body |
+| YouTube video | Paste the transcript text |
+| Twitter / X thread | Paste the thread text |
+
+---
+
 ## 全局路径约定
 
 | 常量 | 值 |

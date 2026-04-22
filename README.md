@@ -1,24 +1,36 @@
-# Content Writing Chinese System
+# Content Writing System
 
-A two-phase content pipeline for writing high-quality Chinese articles from English sources.
+Turn any English source into a polished Chinese article — with any AI, no API key required to get started.
 
-Capture sources → review an English outline → generate a Chinese article for CSDN, WeChat, and monthly recaps.
-
-Works with **Anthropic**, **OpenAI**, or **Ollama** (local). Runs via GitHub Actions, CLI, or as a Python library.
+A structured three-step workflow: feed sources (web pages, YouTube videos, Twitter/X threads) → review an English outline → generate the Chinese article. Works with Claude Code, Cursor, Copilot, ChatGPT, or any AI chat interface. Scripts and GitHub Actions are optional automation layers on top of the same templates.
 
 ---
 
-## How it works
+## The workflow
 
 ```
-Phase 1                          Review              Phase 2
-──────────────────────────────   ──────────────────  ─────────────────────
-URLs + intent                    PR opens with       Comment /generate
-  → fetch web/YouTube/Twitter    English outline       → Chinese article
-  → generate snippets (KB)       ← edit if needed      → committed to PR
+Step 1 — Feed sources          Step 2 — Review outline     Step 3 — Generate article
+──────────────────────────     ─────────────────────────   ──────────────────────────
+URLs or pasted text            English outline appears     Approve → Chinese article
+  → fetch content              ← edit angle / sections     saved to output/
+  → save snippets to KB        ← adjust thesis
   → infer article type
-  → English outline
+  → draft English outline
 ```
+
+The same three steps run whether you are pasting text into ChatGPT, running `/phase1` in Claude Code, executing a CLI command, or triggering a GitHub Actions workflow.
+
+---
+
+## Supported sources
+
+| Source | What you get | Local | GitHub Actions CI |
+|--------|-------------|-------|-------------------|
+| Any webpage / blog | Full article body via BeautifulSoup | Yes | Yes |
+| YouTube video | Full transcript via youtube-transcript-api | Yes | Blocked by YouTube |
+| Twitter / X thread | Full post content via ADHX API (no key needed) | Yes | Blocked by platform DNS |
+
+**YouTube and Twitter/X are first-class sources.** They work in every local environment. GitHub Actions CI runners are blocked by both platforms — this is a platform-level restriction, not a missing feature. Use Layer 2 CLI scripts or Layer 1 coding AI for these sources.
 
 ---
 
@@ -48,7 +60,7 @@ JAM 是 Polkadot 对 Relay Chain 的根本性重构：用「积累-汇聚」计�
 
 ---
 
-### Outline — what the PR shows for review (Phase 1 output)
+### Outline — what appears for review after Step 1
 
 The outline is in English so anyone on the team can read and edit it before the Chinese article is written.
 
@@ -78,7 +90,7 @@ substrate where the concept of a parachain becomes one possible service among ma
 
 ---
 
-### Article — the Chinese output (Phase 2)
+### Article — the Chinese output (Step 3)
 
 Saved to `output/analysis/`. Written in the voice of a cold, critical analyst — not marketing copy.
 
@@ -103,102 +115,60 @@ Gavin Wood 在 GrayPaper 里说得很直接：「JAM 不是区块链，它是一
 
 ---
 
-## Usage
+## Getting started
 
-### Option A — GitHub Actions (recommended for teams)
+### Fastest path — no setup required
 
-**Step 1 — Submit sources**
+1. Clone the repo (or just download `skills/SKILL.MD` and the template files)
+2. Open `skills/SKILL.MD` in any AI chat window (ChatGPT, Claude.ai, Gemini, etc.)
+3. Paste your source content and describe what you want to write
+4. The AI routes to the right template and runs the three-step workflow
 
-> **Actions → Generate Content (Phase 1 — Outline) → Run workflow**
+**No API key needed. No installation needed.** The templates are the product.
 
-| Field | What to enter |
-|-------|--------------|
-| `source_urls` | One or more URLs. One per line or comma-separated. Web pages and blog posts work in CI. **YouTube and Twitter/X are local-only** — GitHub Actions runners are blocked by both platforms. |
-| `intent` | What you want to write — free text (see examples below). |
-| `generate_snippets` | `yes` to save sources into the knowledge base. |
-
-**Intent examples:**
-```
-"analytical piece on JAM's timeline and what it means for Ethereum developers"
-"tutorial on how to set up an RPC node from the official docs"
-"summarise this YouTube talk for a Chinese Web3 audience"
-"explain the new staking changes to a non-technical reader"
-```
-
-A pull request opens with the English outline in the description.
-
-**Step 2 — Review the outline**
-
-Read the PR description. Edit it directly if you want to change the angle or sections. When satisfied, comment `/generate` on the PR.
-
-The Chinese article is committed to the PR branch. Merge when ready.
+For YouTube videos: paste the transcript text directly. For Twitter/X threads: paste the thread text directly. Or use Layer 2 scripts to fetch these automatically.
 
 ---
 
-### Option B — CLI
+### Layer 0 — Templates only (any AI, zero config)
 
-```bash
-# Phase 1: fetch sources, generate outline
-python3 scripts/run_skill.py phase1 \
-  --urls "https://example.com/post, https://youtu.be/xyz" \
-  --intent "analytical piece on staking economics" \
-  --generate-snippets \
-  --pr-body-file pr_body.md
+Open `skills/SKILL.MD` in any AI assistant alongside the relevant template file from `skills/assets/templates/`. Tell the AI your source content and intent. It handles the rest.
 
-# Review pr_body.md, edit the outline section, then:
+This works in ChatGPT, Claude.ai, Gemini, Copilot Chat, or any other AI chat interface — no coding environment required.
 
-# Phase 2: generate Chinese article from approved outline
-python3 scripts/run_skill.py phase2 \
-  --pr-body-file pr_body.md
-
-# Monthly recap
-python3 scripts/run_skill.py monthly-recap --month 2026-04
-```
+See `skills/SKILL.MD` for the zero-config usage guide and routing table.
 
 ---
 
-### Option C — Monthly recap (automated)
-
-> **Actions → Generate Monthly Recap → Run workflow**
-
-| Field | What to enter |
-|-------|--------------|
-| `month` | Format: `YYYY-MM` (e.g. `2026-04`) |
-
-Also runs automatically on the 1st of every month.
-
----
-
-## Article types
-
-The system infers the type automatically from your intent and URLs:
-
-| Type | Template used | Output folder |
-|------|--------------|---------------|
-| Analytical / opinion | `web-remix-to-csdn.md` | `output/analysis/` |
-| Tutorial (from docs) | `polkadot-docs-to-csdn.md` | `output/tutorials/` |
-| Concept explainer (from wiki) | `wiki-to-csdn.md` | `output/explainers/` |
-| Pop-science (from YouTube) | `youtube-remix-to-csdn.md` | `output/science-pop/` |
-| Monthly recap | `monthly-recap.md` | `output/monthly-recap/` |
-
----
-
-## Setup
-
-### 1. Fork or clone
+### Layer 1 — With a coding AI (Claude Code, Cursor, Copilot)
 
 ```bash
 git clone https://github.com/yourorg/content-writing-chinese-system.git
 cd content-writing-chinese-system
-pip install -r requirements.txt
 ```
 
-### 2. Configure your LLM provider
+Open the repo in your coding AI. `CLAUDE.md` is auto-loaded by Claude Code; Cursor and Copilot read it as project context too.
 
-Copy `.env.example` to `.env` and fill in your key:
+Use slash commands (Claude Code):
+
+```
+/phase1 https://example.com/article analytical piece on staking economics
+/generate
+/monthly-recap 2026-04
+```
+
+Or just describe what you want in natural language — the AI reads `CLAUDE.md` and knows the workflow.
+
+---
+
+### Layer 2 — With automation scripts
+
+Install dependencies and configure your LLM provider:
 
 ```bash
+pip install -r requirements.txt
 cp .env.example .env
+# Edit .env: set LLM_PROVIDER and your API key
 ```
 
 | Variable | Default | Description |
@@ -211,33 +181,107 @@ cp .env.example .env
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama endpoint |
 | `OLLAMA_MODEL` | `llama3` | Ollama model name |
 
-### 3. For GitHub Actions
+Run the pipeline:
 
-Go to **Settings → Secrets and variables → Actions** and add:
+```bash
+# Phase 1: fetch sources, generate snippets, produce English outline
+python3 scripts/run_skill.py phase1 \
+  --urls "https://example.com/post, https://youtu.be/xyz" \
+  --intent "analytical piece on staking economics" \
+  --generate-snippets \
+  --pr-body-file pr_body.md
 
-- `ANTHROPIC_API_KEY` (or your chosen provider's key)
-- `LLM_PROVIDER` (as a variable, not secret) — optional, defaults to `anthropic`
+# Review pr_body.md, edit the outline section, then:
+
+# Phase 2: generate Chinese article from the approved outline
+python3 scripts/run_skill.py phase2 \
+  --pr-body-file pr_body.md
+
+# Monthly recap: summarise all snippets from a given month
+python3 scripts/run_skill.py monthly-recap --month 2026-04
+```
+
+Layer 2 enables: automatic YouTube transcript extraction, automatic Twitter/X fetching (ADHX API, no key needed), and snippet knowledge base management with deduplication.
 
 ---
 
-## Repository structure
+### Layer 3 — GitHub Actions (team async workflow)
+
+Go to **Actions → Generate Content (Phase 1 — Outline) → Run workflow**:
+
+| Field | What to enter |
+|-------|--------------|
+| `source_urls` | One or more URLs, one per line or comma-separated. Web pages and blog posts work in CI. YouTube and Twitter/X must be run locally. |
+| `intent` | What you want to write — free text. |
+| `generate_snippets` | `yes` to save sources into the knowledge base. |
+
+A pull request opens with the English outline in the description. Review it, edit if needed, then comment `/generate` on the PR. The Chinese article is committed to the PR branch.
+
+**CI limitation:** GitHub Actions runners cannot reach YouTube or Twitter/X. Use Layer 1 or Layer 2 for those sources, then paste the extracted content into the workflow.
+
+For GitHub Actions setup, add your API key to **Settings → Secrets and variables → Actions**:
+- `ANTHROPIC_API_KEY` (or your chosen provider's key)
+- `LLM_PROVIDER` as a variable (optional, defaults to `anthropic`)
+
+---
+
+## Article types
+
+The system infers the article type automatically from your intent and URLs:
+
+| Type | Template used | Output folder |
+|------|--------------|---------------|
+| Analytical / opinion | `web-remix-to-csdn.md` | `output/analysis/` |
+| Tutorial (from docs) | `polkadot-docs-to-csdn.md` | `output/tutorials/` |
+| Concept explainer (from wiki) | `wiki-to-csdn.md` | `output/explainers/` |
+| Pop-science (from YouTube) | `youtube-remix-to-csdn.md` | `output/science-pop/` |
+| Monthly recap | `monthly-recap.md` | `output/monthly-recap/` |
+
+---
+
+## Knowledge base (snippets)
+
+Every time you run Phase 1 with `--generate-snippets`, the fetched sources are saved as structured snippet files in `references/snippets/`. Each snippet records the source URL, key claims, and a one-line Chinese summary.
+
+Snippets accumulate over time and are deduplicated automatically — if you fetch the same URL twice, the existing snippet is updated rather than duplicated.
+
+The monthly recap command reads all snippets from a given month and synthesises them into a single Chinese recap article. This is the primary way the knowledge base gets consumed.
+
+---
+
+## Repository layout
 
 ```
 .
-├── skills/                         ← Prompt templates (the core logic)
-│   ├── SKILL.MD                    ← Router: which template to use when
+├── skills/                         ← Templates and routing (the core product)
+│   ├── SKILL.MD                    ← Router: which template to use when; zero-config guide
 │   └── assets/
 │       ├── styles/                 ← Writing style guides
+│       │   ├── _base.md            ← Base style (voice, tone, critical perspective)
+│       │   └── monthly-recap.md    ← Monthly recap style (extends _base)
 │       └── templates/              ← One file per article type
-├── scripts/
+│           ├── snippet.md
+│           ├── web-remix-to-csdn.md
+│           ├── youtube-remix-to-csdn.md
+│           ├── polkadot-docs-to-csdn.md
+│           ├── wiki-to-csdn.md
+│           ├── monthly-recap.md
+│           ├── github-digest.md
+│           ├── event-review.md
+│           └── humanizer-zh.md
+├── scripts/                        ← Optional automation layer
+│   ├── run_skill.py                ← Main orchestrator (phase1 / phase2 / monthly-recap)
+│   ├── fetcher.py                  ← URL fetching: web / YouTube / Twitter/X
 │   ├── llm.py                      ← Provider-agnostic LLM client
-│   ├── fetcher.py                  ← URL content extraction (web/YouTube/Twitter)
-│   ├── snippets.py                 ← Snippet generation, deduplication, update
-│   └── run_skill.py                ← Main orchestrator (phase1 / phase2 / monthly-recap)
-├── .github/workflows/
-│   ├── generate.yml                ← Phase 1: fetch + snippets + outline → PR
-│   ├── on-generate-comment.yml     ← Phase 2: /generate comment → Chinese article
-│   └── generate-monthly-recap.yml  ← Manual + scheduled monthly recap
+│   └── snippets.py                 ← Snippet generation, dedup, update
+├── .github/workflows/              ← GitHub Actions (Layer 3)
+│   ├── generate.yml
+│   ├── on-generate-comment.yml
+│   └── generate-monthly-recap.yml
+├── .claude/commands/               ← Claude Code slash commands (Layer 1)
+│   ├── phase1.md
+│   ├── generate.md
+│   └── monthly-recap.md
 ├── references/
 │   └── snippets/                   ← Accumulated source records (knowledge base)
 ├── output/
@@ -246,23 +290,11 @@ Go to **Settings → Secrets and variables → Actions** and add:
 │   ├── explainers/
 │   ├── science-pop/
 │   └── monthly-recap/
+├── examples/                       ← Sample outputs
+│   ├── example-snippet.md
+│   ├── example-outline.md
+│   └── example-article.md
+├── CLAUDE.md                       ← AI assistant project guide (auto-read by Claude Code)
 ├── .env.example
 └── requirements.txt
 ```
-
----
-
-## Supported URL types
-
-| Source | How content is extracted |
-|--------|--------------------------|
-| Any webpage / blog | `requests` + `BeautifulSoup` |
-| YouTube | `youtube-transcript-api` (transcript text) |
-| Twitter / X | ADHX API (full thread content) |
-
----
-
-## Output language
-
-Articles are always written in **Chinese (中文)**.
-PR descriptions, outlines, and status messages are always in **English**.

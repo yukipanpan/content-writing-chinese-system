@@ -3,8 +3,13 @@ fetcher.py — Detects URL type and extracts content before passing to Claude.
 
 Supported sources:
   - YouTube (youtube.com, youtu.be)  → transcript via youtube-transcript-api
-  - Twitter / X (twitter.com, x.com) → full post via ADHX API
+                                       CI note: GitHub Actions runners are IP-blocked
+                                       by YouTube — local use only.
+  - Twitter / X (twitter.com, x.com) → full post via ADHX API (no key required)
+                                        CI note: GitHub Actions DNS cannot resolve
+                                        api.adhx.com — local use only.
   - Everything else                  → webpage body via requests + BeautifulSoup
+                                       Works in all environments including CI.
 """
 
 import re
