@@ -76,10 +76,11 @@ jobs:
       - name: Read PR body
         id: pr_body
         run: |
+          DELIM="PR_BODY_$(openssl rand -hex 16)"
           {
-            echo "content<<PR_BODY_EOF"
+            echo "content<<$DELIM"
             cat pr_body.md
-            echo "PR_BODY_EOF"
+            echo "$DELIM"
           } >> $GITHUB_OUTPUT
 
       - name: Open PR with outline for review
