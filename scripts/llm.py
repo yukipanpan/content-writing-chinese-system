@@ -40,7 +40,7 @@ def _chat_anthropic(system: str, user: str, max_tokens: int) -> str:
     if not api_key:
         sys.exit("ANTHROPIC_API_KEY is not set")
 
-    model = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+    model = os.environ.get("ANTHROPIC_MODEL") or "claude-haiku-4-5-20251001"
     client = anthropic.Anthropic(api_key=api_key)
     resp = client.messages.create(
         model=model,
@@ -63,7 +63,7 @@ def _chat_openai(system: str, user: str, max_tokens: int) -> str:
     if not api_key:
         sys.exit("OPENAI_API_KEY is not set")
 
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    model = os.environ.get("OPENAI_MODEL") or "gpt-4o-mini"
     client = OpenAI(api_key=api_key)
     resp = client.chat.completions.create(
         model=model,

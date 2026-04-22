@@ -57,35 +57,7 @@ def fetch_youtube(url: str) -> FetchResult:
         return FetchResult(url, "youtube", "", "", f"Could not extract video ID from: {url}")
 
     try:
-        # youtube-transcript-api >= 0.7 uses an instance-based API;
-        # older versions used class methods. Support both.
-        api = YouTubeTranscriptApi()
-        _fetch = getattr(api, "fetch", None)
-        _list  = getattr(api, "list",  None)
-
-        if _fetch:
-            # New API (>= 0.7)
-            try:
-                fetched = _fetch(video_id, languages=["en"])
-            except NoTranscriptFound:
-                try:
-                    fetched = _fetch(video_id, languages=["zh", "zh-Hans", "zh-Hant"])
-                except NoTranscriptFound:
-                    transcript_list = _list(video_id)
-                    fetched = next(iter(transcript_list)).fetch()
-            text = " ".join(s.text for s in fetched)
-        else:
-            # Legacy API (< 0.7)
-            try:
-                segments = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
-            except NoTranscriptFound:
-                try:
-                    segments = YouTubeTranscriptApi.get_transcript(video_id, languages=["zh", "zh-Hans", "zh-Hant"])
-                except NoTranscriptFound:
-                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                    segments = next(iter(transcript_list)).fetch()
-            text = " ".join(s["text"] for s in segments)
-
+        text = _youtube_get_text(YouTubeTranscriptApi, NoTranscriptFound, video_id)
         title = f"YouTube video {video_id}"
         content = (
             f"[YouTube Transcript]\n"
@@ -94,9 +66,58 @@ def fetch_youtube(url: str) -> FetchResult:
             f"{text}"
         )
         return FetchResult(url, "youtube", title, content, None)
-
     except Exception as e:
         return FetchResult(url, "youtube", "", "", f"Transcript fetch failed: {e}")
+
+
+def _youtube_get_text(Api, NoTranscriptFound, video_id: str) -> str:
+    """
+    Fetch transcript text, handling all known youtube-transcript-api versions:
+      < 0.7  — class methods: Api.get_transcript(), Api.list_transcripts()
+      0.7.x  — instance methods: Api().fetch(), Api().list()
+      1.x    — instance methods: Api().get_transcript(), Api().list_transcripts()
+    """
+    def _segments_to_text(segments) -> str:
+        return " ".join(
+            s["text"] if isinstance(s, dict) else s.text
+            for s in segments
+        )
+
+    api = Api()
+
+    # Ordered preference: en → zh variants → any available
+    lang_attempts = [["en"], ["zh", "zh-Hans", "zh-Hant"]]
+
+    # Try instance method "fetch" (0.7.x)
+    if hasattr(api, "fetch"):
+        for langs in lang_attempts:
+            try:
+                return _segments_to_text(api.fetch(video_id, languages=langs))
+            except NoTranscriptFound:
+                continue
+        # Fall back to any available
+        tl = api.list(video_id) if hasattr(api, "list") else Api.list_transcripts(video_id)
+        return _segments_to_text(next(iter(tl)).fetch())
+
+    # Try instance method "get_transcript" (1.x)
+    if hasattr(api, "get_transcript"):
+        for langs in lang_attempts:
+            try:
+                return _segments_to_text(api.get_transcript(video_id, languages=langs))
+            except NoTranscriptFound:
+                continue
+        tl_method = getattr(api, "list_transcripts", None) or getattr(api, "list", None)
+        tl = tl_method(video_id)
+        return _segments_to_text(next(iter(tl)).fetch())
+
+    # Legacy class method (< 0.7)
+    for langs in lang_attempts:
+        try:
+            return _segments_to_text(Api.get_transcript(video_id, languages=langs))
+        except NoTranscriptFound:
+            continue
+    tl = Api.list_transcripts(video_id)
+    return _segments_to_text(next(iter(tl)).fetch())
 
 
 # ── Twitter / X via ADHX API ────────────────────────────────────────────────
