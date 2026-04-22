@@ -76,23 +76,20 @@ jobs:
           commit_message: "snippets: auto-update from phase1 run"
           file_pattern: "references/snippets/*.md"
 
-      - name: Read PR body
-        id: pr_body
-        run: |
-          DELIM="PR_BODY_$(openssl rand -hex 16)"
-          {
-            echo "content<<$DELIM"
-            cat pr_body.md
-            echo ""
-            echo "$DELIM"
-          } >> $GITHUB_OUTPUT
-
       - name: Open PR with outline for review
-        uses: peter-evans/create-pull-request@v7
-        with:
-          title: "content: ${{ inputs.intent }}"
-          body: ${{ steps.pr_body.outputs.content }}
-          branch: "content/auto-${{ github.run_id }}"
-          commit-message: "phase1: outline ready for review"
-          delete-branch: false
-          labels: "awaiting-review"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="content/auto-${{ github.run_id }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add pr_body.md
+          git commit -m "phase1: outline ready for review"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "content: ${{ inputs.intent }}" \
+            --body-file pr_body.md \
+            --label "awaiting-review" \
+            --base main \
+            --head "$BRANCH"
