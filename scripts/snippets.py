@@ -258,7 +258,7 @@ def process_url(
         new_path = snippet_dir / new_filename
         if new_path != existing_path:
             existing_path.unlink()
-        save_snippet(updated_content, new_filename, snippet_dir)
+        new_path.write_text(updated_content)
         return SnippetResult("updated", new_filename, new_path)
     else:
         filename = derive_filename_from_candidate(candidate, today)
