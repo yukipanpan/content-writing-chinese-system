@@ -15,40 +15,33 @@ URLs or a topic keyword  →   English outline appears   →  Approve → Chines
   save snippets to KB
 ```
 
-The same workflow runs whether you paste text into ChatGPT, use `/phase1` in Claude Code, run a CLI command, or trigger GitHub Actions.
-
 ---
 
-## Quick start
+## Quick start — Claude Code
 
-No installation. No API key.
-
-1. Clone the repo
-2. Open `skills/SKILL.MD` in any AI chat (ChatGPT, Claude.ai, Gemini…)
-3. Paste your source content and describe what you want to write
-4. Done — the AI routes to the right template and runs the workflow
-
-For automated URL fetching, YouTube transcripts, and Twitter/X threads: use Layer 2 below.
-
----
-
-## Four ways to run it
-
-### Layer 0 — Any AI chat, zero setup
-
-Open `skills/SKILL.MD` + a template from `skills/assets/templates/` in any AI interface. Paste your source and intent. No code, no keys, no install.
-
----
-
-### Layer 1a — Claude Code (slash commands)
+The fastest path. No API key needed if you have Claude Code installed.
 
 ```bash
 git clone https://github.com/yukipanpan/content-writing-chinese-system.git
 cd content-writing-chinese-system
-claude   # open Claude Code in this repo
+claude   # opens Claude Code with slash commands pre-loaded
 ```
 
-`.claude/commands/` registers slash commands automatically. Just type:
+Then type:
+
+```
+/phase1 https://polkadot.com/blog/jam-update  intent: analytical piece on JAM
+```
+
+Review the outline → `/generate` → Chinese article saved to `output/`.
+
+---
+
+## All ways to run it
+
+### Claude Code (slash commands)
+
+`.claude/commands/` registers these automatically:
 
 ```
 # From a URL
@@ -69,31 +62,14 @@ claude   # open Claude Code in this repo
 
 ---
 
-### Layer 1b — Cursor / Copilot / other coding AIs (natural language)
-
-```bash
-git clone https://github.com/yukipanpan/content-writing-chinese-system.git
-# Open the folder in Cursor, VS Code + Copilot, or any coding AI
-```
-
-`CLAUDE.md` is read automatically as project context. Then just describe what you want in natural language — the AI reads the workflow, understands the structure, and runs the scripts itself:
-
-> "Fetch https://polkadot.com/blog/jam-update and write an analytical piece on JAM for a Chinese Web3 audience."
-
-> "Search for recent articles on Polkadot JAM and generate an outline."
-
-No slash commands needed — the AI figures out which script to call.
-
----
-
-### Layer 2 — CLI scripts
+### CLI scripts (any LLM provider)
 
 ```bash
 pip install -r requirements.txt
 cp .env.example .env   # set LLM_BASE_URL + LLM_MODEL + LLM_API_KEY
 ```
 
-Works with any OpenAI-compatible endpoint — OpenAI, Groq, Mistral, Ollama, LM Studio, or your company's internal gateway. See `.env.example` for provider examples. No API key? Set `LLM_PROVIDER=claude-code` to use the local `claude` CLI.
+Works with any OpenAI-compatible endpoint — OpenAI, Groq, Mistral, Ollama, LM Studio, or your company's internal gateway. See `.env.example` for examples. No API key? Set `LLM_PROVIDER=claude-code` to use the local `claude` CLI.
 
 ```bash
 # Step 1 — fetch sources + generate English outline (manual URLs)
@@ -124,7 +100,24 @@ The article type (analytical, tutorial, explainer, pop-science…) is inferred a
 
 ---
 
-### Layer 3 — GitHub Actions
+### Cursor / Copilot / other coding AIs
+
+```bash
+git clone https://github.com/yukipanpan/content-writing-chinese-system.git
+# Open the folder in Cursor, VS Code + Copilot, or any coding AI
+```
+
+`CLAUDE.md` is read automatically as project context. Describe what you want in natural language — the AI reads the workflow and runs the scripts itself:
+
+> "Fetch https://polkadot.com/blog/jam-update and write an analytical piece on JAM for a Chinese Web3 audience."
+
+> "Search for recent articles on Polkadot JAM and generate an outline."
+
+No slash commands needed.
+
+---
+
+### GitHub Actions (CI / team automation)
 
 **Actions → Generate Content (Phase 1) → Run workflow**
 
@@ -190,13 +183,15 @@ Every Phase 1 run with `--generate-snippets` saves structured records to `refere
 │       ├── styles/              ← Writing style guides
 │       └── templates/           ← One file per article type
 ├── scripts/
-│   ├── run_skill.py             ← Orchestrator (phase1 / phase2 / monthly-recap)
+│   ├── run_skill.py             ← CLI entry point (phase1 / phase2 / monthly-recap)
+│   ├── pipeline.py              ← Business logic: outline, article, PR body, phases
+│   ├── validate.py              ← Input validation (fail fast with clear errors)
 │   ├── fetcher.py               ← URL fetching: web / YouTube / Twitter/X
 │   ├── discover.py              ← Topic-based source auto-discovery
 │   ├── llm.py                   ← Provider-agnostic LLM client
 │   └── snippets.py              ← Snippet generation, dedup, update
-├── .github/workflows/           ← GitHub Actions (Layer 3)
-├── .claude/commands/            ← Claude Code slash commands (Layer 1)
+├── .github/workflows/           ← GitHub Actions (CI automation)
+├── .claude/commands/            ← Claude Code slash commands
 ├── references/snippets/         ← Knowledge base
 ├── output/                      ← Generated articles
 ├── examples/                    ← Sample outputs
