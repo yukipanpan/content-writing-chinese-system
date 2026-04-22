@@ -22,6 +22,87 @@ URLs + intent                    PR opens with       Comment /generate
 
 ---
 
+## Example outputs
+
+### Snippet — a source record saved to the knowledge base
+
+Snippets are the building blocks of the knowledge base. Each one captures a source, its key claims, and a one-liner summary — structured so Claude can reference them later when writing articles or monthly recaps.
+
+```markdown
+## Polkadot JAM Upgrade — Roadmap and Developer Impact
+
+**id:** S-20260115-0042  |  **created:** 2026-01-15  |  **updated:** 2026-03-08
+
+## 一句话总结
+JAM 是 Polkadot 对 Relay Chain 的根本性重构：用「积累-汇聚」计算模型替代现有的
+平行链插槽机制，目标是让任意计算（不限于区块链）都能在共享安全下运行。
+
+## 核心要点
+- JAM 不是「新链」，是现有 Relay Chain 的替代执行层，兼容 XCMP 和现有平行链
+- 核心原语：Service（服务单元）、Work Package（工作包）、Accumulate + Refine 双阶段执行
+- Web3 Foundation 设置 1000 万美元实现者奖金，奖励非 Parity 团队的独立 JAM 实现
+- 主网部署时间未定；2026 Q3 前至少需要 3 个独立客户端通过兼容性测试
+```
+
+→ [Full snippet example](examples/example-snippet.md)
+
+---
+
+### Outline — what the PR shows for review (Phase 1 output)
+
+The outline is in English so anyone on the team can read and edit it before the Chinese article is written.
+
+```
+**Working title:** JAM Is Not a Blockchain — And That's the Point
+
+**Type:** analytical
+
+**Thesis / angle:** Ethereum developers evaluating Polkadot are still thinking in terms
+of "chains" and "slots." JAM erases that mental model entirely: it's a shared computation
+substrate where the concept of a parachain becomes one possible service among many.
+
+**Sections:**
+1. The problem JAM is solving — Why the relay chain model created artificial constraints
+2. What JAM actually is — The Refine / Accumulate model explained without jargon
+3. The timeline that matters — Why the Q3 2026 client milestone is the real signal
+4. What this means for Ethereum developers — Honest tradeoffs vs. staying on L2s
+5. The open question — Whether JAM's abstraction is a superpower or a coordination trap
+
+**Key claims to make:**
+- JAM's 10M prize is a hedge against client monoculture, not a development bounty
+- EVM on JAM will exist as a "service," not a native assumption — bigger shift than docs suggest
+- Q3 2026 milestone is the earliest meaningful signal; anything before is vaporware risk
+```
+
+→ [Full outline example](examples/example-outline.md)
+
+---
+
+### Article — the Chinese output (Phase 2)
+
+Saved to `output/analysis/`. Written in the voice of a cold, critical analyst — not marketing copy.
+
+```markdown
+# JAM 不是区块链——这才是重点
+
+如果你是一个 Ethereum 开发者，正在重新评估 Polkadot 的价值，你大概率还在用
+「链」「插槽」「平行链」这套词汇思考问题。这很正常，因为 Polkadot 过去五年的
+营销材料就是这么写的。
+
+但 JAM 发布之后，这套词汇就过时了。
+
+Gavin Wood 在 GrayPaper 里说得很直接：「JAM 不是区块链，它是一个碰巧具有类区块链
+属性的计算模型。」这句话不是在玩文字游戏。它意味着，Polkadot 下一代执行层的设计
+前提，是把「区块链」这个概念当作一种特殊情况——而不是基础假设。
+
+对于从 Ethereum 生态迁移过来的开发者，这个转变比技术文档暗示的要大得多。
+…
+```
+
+→ [Full article example](examples/example-article.md)
+
+---
+
 ## Usage
 
 ### Option A — GitHub Actions (recommended for teams)
