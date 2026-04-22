@@ -1,4 +1,4 @@
-# Yuki Base Writing Style
+# Base Writing Style
 
 General style guidelines that apply to all article types. Specific article types may inherit and extend these guidelines.
 
