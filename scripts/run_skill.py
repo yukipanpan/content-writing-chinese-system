@@ -29,7 +29,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-import anthropic
+import llm
 
 from fetcher import fetch_all, FetchResult
 from snippets import process_all, SNIPPET_DIR
@@ -62,15 +62,15 @@ METADATA_MARKER = "<!-- POLKADOT_CONTENT_METADATA"
 
 # ── Article type inference ───────────────────────────────────────────────────
 
-def infer_article_type(client: anthropic.Anthropic, intent: str, urls: list[str]) -> str:
+def infer_article_type(intent: str, urls: list[str]) -> str:
     """
-    Ask Claude to pick the best article type from the user's free-text intent.
+    Ask the LLM to pick the best article type from the user's free-text intent.
     Returns one of the TEMPLATE_MAP keys.
     """
     system = (
         "You classify content requests into one of four article types:\n"
-        "- analytical: opinion/analysis, multi-source, Polkadot ecosystem commentary\n"
-        "- tutorial: step-by-step how-to guide, usually from docs.polkadot.com\n"
+        "- analytical: opinion/analysis, multi-source commentary\n"
+        "- tutorial: step-by-step how-to guide, usually from official docs\n"
         "- concept-explainer: explains a mechanism or concept in depth, usually from wiki\n"
         "- video-summary: pop-science article based on a YouTube video\n\n"
         "Reply with JSON only: {\"type\": \"<one of the four>\", \"reason\": \"<1 sentence>\"}"
@@ -78,13 +78,7 @@ def infer_article_type(client: anthropic.Anthropic, intent: str, urls: list[str]
     url_hint = "\n".join(urls)
     user = f"User intent: {intent}\n\nSource URLs:\n{url_hint}"
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=128,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    raw = resp.content[0].text.strip()
+    raw = llm.chat(system, user, max_tokens=128)
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
     try:
         result = json.loads(raw)
@@ -143,43 +137,26 @@ Source material:
 """
 
 
-def generate_outline(
-    client: anthropic.Anthropic,
-    source_content: str,
-    article_type: str,
-    intent: str,
-) -> str:
+def generate_outline(source_content: str, article_type: str, intent: str) -> str:
     prompt = OUTLINE_PROMPT.format(
         article_type=article_type,
         intent=intent,
-        source_content=source_content[:12000],  # guard against token overflow
+        source_content=source_content[:12000],
     )
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1500,
-        system=OUTLINE_SYSTEM,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    raw = resp.content[0].text.strip()
+    raw = llm.chat(OUTLINE_SYSTEM, prompt, max_tokens=1500)
     m = re.search(r"<outline>(.*?)</outline>", raw, re.DOTALL)
     return m.group(1).strip() if m else raw
 
 
 # ── Article generation (Phase 2) ─────────────────────────────────────────────
 
-def generate_article(
-    client: anthropic.Anthropic,
-    outline: str,
-    source_content: str,
-    article_type: str,
-    intent: str,
-) -> str:
+def generate_article(outline: str, source_content: str, article_type: str, intent: str) -> str:
     template = TEMPLATE_MAP[article_type].read_text()
     style    = STYLE_BASE.read_text()
     router   = ROUTER.read_text()
 
     system = (
-        f"You are a Polkadot ecosystem content specialist writing in Chinese (中文).\n\n"
+        f"You are a content specialist writing in Chinese (中文).\n\n"
         f"## System Router\n{router}\n\n"
         f"## Writing Style\n{style}\n\n"
         f"## Active Template\n{template}\n\n"
@@ -196,13 +173,7 @@ def generate_article(
         "Write the complete Chinese article now. Follow the outline's structure and thesis."
     )
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=8192,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    return resp.content[0].text.strip()
+    return llm.chat(system, user, max_tokens=8192)
 
 
 # ── PR body builder ───────────────────────────────────────────────────────────
@@ -312,7 +283,7 @@ def save_article(content: str, article_type: str, urls: list[str], output_dir: s
 
 # ── Phase 1 ───────────────────────────────────────────────────────────────────
 
-def phase1(args, client: anthropic.Anthropic):
+def phase1(args):
     urls = parse_urls(args.urls)
     if not urls:
         sys.exit("--urls is required for phase1")
@@ -323,28 +294,20 @@ def phase1(args, client: anthropic.Anthropic):
     for w in fetch_warnings:
         print(f"  {w}", file=sys.stderr)
 
-    # Build (url, content) pairs for snippet processing
-    individual_contents = []
-    for url in urls:
-        url = url.strip()
-        marker = f"--- Source ({{}}):{url} ---"  # matches fetcher output format
-        # Simple split: find each source block
-        individual_contents.append((url, source_content))  # pass full content; snippets.py uses url for context
-
     # 2. Generate snippets (optional)
     snippet_results = []
     if args.generate_snippets:
         print(f"\n[2/4] Generating & deduplicating snippets…", file=sys.stderr)
         fetched_pairs = [(url, source_content) for url in urls]
-        snippet_results = process_all(client, fetched_pairs, SNIPPET_DIR)
+        snippet_results = process_all(fetched_pairs, SNIPPET_DIR)
 
     # 3. Infer article type
     print(f"\n[3/4] Inferring article type from intent…", file=sys.stderr)
-    article_type = infer_article_type(client, args.intent, urls)
+    article_type = infer_article_type(args.intent, urls)
 
     # 4. Generate English outline
     print(f"\n[4/4] Generating English outline…", file=sys.stderr)
-    outline = generate_outline(client, source_content, article_type, args.intent)
+    outline = generate_outline(source_content, article_type, args.intent)
 
     # Build metadata (embedded in PR for Phase 2 to read)
     metadata = {
@@ -368,7 +331,7 @@ def phase1(args, client: anthropic.Anthropic):
 
 # ── Phase 2 ───────────────────────────────────────────────────────────────────
 
-def phase2(args, client: anthropic.Anthropic):
+def phase2(args):
     pr_body = Path(args.pr_body_file).read_text()
     outline, metadata = parse_pr_body(pr_body)
 
@@ -380,14 +343,14 @@ def phase2(args, client: anthropic.Anthropic):
     source_content, _ = fetch_all(urls)
 
     print(f"\n[2/2] Generating Chinese article ({article_type})…", file=sys.stderr)
-    article = generate_article(client, outline, source_content, article_type, intent)
+    article = generate_article(outline, source_content, article_type, intent)
 
     save_article(article, article_type, urls, args.output_dir)
 
 
 # ── Monthly recap (standalone) ────────────────────────────────────────────────
 
-def monthly_recap(args, client: anthropic.Anthropic):
+def monthly_recap(args):
     template = (SKILL_ROOT / "assets/templates/monthly-recap.md").read_text()
     style    = STYLE_BASE.read_text()
 
@@ -405,7 +368,7 @@ def monthly_recap(args, client: anthropic.Anthropic):
     )
 
     system = (
-        f"You are a Polkadot monthly recap writer. Write in Chinese (中文).\n\n"
+        f"You are a monthly recap writer. Write in Chinese (中文).\n\n"
         f"## Writing Style\n{style}\n\n"
         f"## Monthly Recap Template\n{template}"
     )
@@ -414,17 +377,12 @@ def monthly_recap(args, client: anthropic.Anthropic):
         f"Snippets ({len(matched)} total):\n\n{snippet_contents}"
     )
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=8192,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
+    article = llm.chat(system, user, max_tokens=8192)
 
     out = Path("output/monthly-recap")
     out.mkdir(parents=True, exist_ok=True)
     path = out / f"{args.month}.md"
-    path.write_text(resp.content[0].text.strip())
+    path.write_text(article)
     print(f"  saved → {path}", file=sys.stderr)
 
 
@@ -451,14 +409,13 @@ def main():
     pm.add_argument("--month",           required=True)
 
     args = parser.parse_args()
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     if args.mode == "phase1":
-        phase1(args, client)
+        phase1(args)
     elif args.mode == "phase2":
-        phase2(args, client)
+        phase2(args)
     elif args.mode == "monthly-recap":
-        monthly_recap(args, client)
+        monthly_recap(args)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-import anthropic
+import llm
 
 
 SNIPPET_DIR = Path("references/snippets")
@@ -68,17 +68,12 @@ def _extract_heading(filepath: Path) -> str:
 
 # ── Claude: generate candidate snippet ──────────────────────────────────────
 
-def generate_candidate(
-    client: anthropic.Anthropic,
-    url: str,
-    source_content: str,
-    today: str,
-) -> str:
-    """Ask Claude to produce a snippet following the snippet.md template."""
+def generate_candidate(url: str, source_content: str, today: str) -> str:
+    """Ask the LLM to produce a snippet following the snippet.md template."""
     template = SNIPPET_TPL.read_text()
 
     system = (
-        "You are a Polkadot content analyst. "
+        "You are a content analyst. "
         "Your task is to produce a structured snippet following the template exactly. "
         "Output ONLY the snippet markdown — no commentary before or after.\n\n"
         f"## Snippet Template\n\n{template}"
@@ -93,22 +88,12 @@ def generate_candidate(
         "Derive the file-name date from the source publication date, not today."
     )
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=2048,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    return resp.content[0].text.strip()
+    return llm.chat(system, user, max_tokens=2048)
 
 
 # ── Claude: deduplication check ─────────────────────────────────────────────
 
-def find_duplicate(
-    client: anthropic.Anthropic,
-    candidate_snippet: str,
-    index: list[dict],
-) -> str | None:
+def find_duplicate(candidate_snippet: str, index: list[dict]) -> str | None:
     """
     Ask Claude whether the candidate overlaps with any existing snippet.
     Returns the matching filename, or None if it's a new topic.
@@ -137,14 +122,7 @@ def find_duplicate(
         '{"is_duplicate": false}'
     )
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=256,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-
-    raw = resp.content[0].text.strip()
+    raw = llm.chat(system, user, max_tokens=256)
     # Strip markdown code fences if present
     raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
     try:
@@ -165,7 +143,6 @@ def find_duplicate(
 # ── Claude: merge into existing snippet ──────────────────────────────────────
 
 def merge_into_existing(
-    client: anthropic.Anthropic,
     existing_path: Path,
     candidate_snippet: str,
     new_url: str,
@@ -195,13 +172,7 @@ def merge_into_existing(
         "Apply the date-rollback rule if the event status changed."
     )
 
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=3000,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    text = resp.content[0].text.strip()
+    text = llm.chat(system, user, max_tokens=3000)
 
     # Extract filename if Claude provided one
     filename_match = re.search(r"^FILENAME:\s*(.+\.md)", text, re.MULTILINE)
@@ -253,7 +224,6 @@ class SnippetResult:
 
 
 def process_url(
-    client: anthropic.Anthropic,
     url: str,
     source_content: str,
     snippet_dir: Path = SNIPPET_DIR,
@@ -266,16 +236,15 @@ def process_url(
     index = build_snippet_index(snippet_dir)
 
     print(f"  generating snippet for: {url}", file=sys.stderr)
-    candidate = generate_candidate(client, url, source_content, today)
+    candidate = generate_candidate(url, source_content, today)
 
-    duplicate_filename = find_duplicate(client, candidate, index)
+    duplicate_filename = find_duplicate(candidate, index)
 
     if duplicate_filename:
         existing_path = snippet_dir / duplicate_filename
         updated_content, new_filename = merge_into_existing(
-            client, existing_path, candidate, url, today
+            existing_path, candidate, url, today
         )
-        # Rename file if needed
         new_path = snippet_dir / new_filename
         if new_path != existing_path:
             existing_path.unlink()
@@ -288,14 +257,13 @@ def process_url(
 
 
 def process_all(
-    client: anthropic.Anthropic,
     fetched: list[tuple[str, str]],  # list of (url, content)
     snippet_dir: Path = SNIPPET_DIR,
 ) -> list[SnippetResult]:
     """Process all fetched URLs. Returns list of SnippetResult."""
     results = []
     for url, content in fetched:
-        result = process_url(client, url, content, snippet_dir)
+        result = process_url(url, content, snippet_dir)
         print(f"  {result}", file=sys.stderr)
         results.append(result)
     return results

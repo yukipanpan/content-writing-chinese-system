@@ -1,4 +1,8 @@
-anthropic>=0.40.0
+# Core (always needed)
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 youtube-transcript-api>=0.6.2
+
+# LLM providers — install the one you use
+anthropic>=0.40.0      # for LLM_PROVIDER=anthropic (default)
+# openai>=1.0.0        # for LLM_PROVIDER=openai
