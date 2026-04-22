@@ -19,3 +19,6 @@ Thumbs.db
 pr_body.md
 outline.txt
 snippet_changes.txt
+
+# Local env (never commit real keys)
+.env

@@ -54,7 +54,11 @@ jobs:
 
       - name: Generate Chinese article from approved outline
         env:
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           python3 scripts/run_skill.py phase2 \
             --pr-body-file pr_body.md

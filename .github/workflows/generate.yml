@@ -6,17 +6,17 @@ on:
       source_urls:
         description: >
           Source URLs — one per line or comma-separated.
-          Accepts: blog posts, docs.polkadot.com, wiki.polkadot.network,
+          Accepts: blog posts, official docs, wiki pages,
           YouTube links (transcript extracted), Twitter/X threads (via ADHX API).
         required: true
       intent:
         description: >
           What do you want to write? Describe freely in English.
           Examples:
-            "a tutorial on XCM for Ethereum developers"
-            "analytical piece on the JAM timeline and what it means for builders"
+            "a tutorial on setting up a node for new developers"
+            "analytical piece on the latest protocol upgrade and what it means for builders"
             "explain the new staking changes to a non-technical audience"
-            "summarise this YouTube talk for a Chinese Web3 audience"
+            "summarise this YouTube talk for a Chinese audience"
         required: true
       generate_snippets:
         description: >
@@ -49,7 +49,11 @@ jobs:
 
       - name: Fetch sources, generate snippets, build outline
         env:
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
           SNIPPET_FLAG=""
           if [ "${{ inputs.generate_snippets }}" = "yes" ]; then

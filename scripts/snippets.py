@@ -191,6 +191,16 @@ def merge_into_existing(
 def save_snippet(content: str, filename: str, snippet_dir: Path) -> Path:
     snippet_dir.mkdir(parents=True, exist_ok=True)
     path = snippet_dir / filename
+    # Avoid silently overwriting an unrelated existing snippet
+    if path.exists():
+        stem = Path(filename).stem
+        suffix = Path(filename).suffix
+        for i in range(2, 100):
+            candidate = snippet_dir / f"{stem}-{i}{suffix}"
+            if not candidate.exists():
+                path = candidate
+                print(f"  ⚠ filename collision, saving as {path.name}", file=sys.stderr)
+                break
     path.write_text(content)
     return path
 

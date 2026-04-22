@@ -7,14 +7,6 @@ on:
       month:
         description: "Month to recap (format: YYYY-MM, e.g. 2026-04)"
         required: true
-      output_language:
-        description: "Output language"
-        required: true
-        type: choice
-        default: "chinese"
-        options:
-          - chinese
-          - english
 
   # Auto-trigger on the 1st of every month at 09:00 UTC
   schedule:
@@ -23,8 +15,19 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Resolve month (use previous month on scheduled runs)
         id: resolve
@@ -35,16 +38,16 @@ jobs:
             echo "month=$(date -d 'last month' '+%Y-%m')" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate monthly recap via Claude
+      - name: Generate monthly recap
         env:
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'anthropic' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
-          python3 scripts/run_skill.py \
-            --template "monthly-recap" \
-            --month "${{ steps.resolve.outputs.month }}" \
-            --language "${{ inputs.output_language || 'chinese' }}" \
-            --snippet-dir "references/snippets" \
-            --output-dir "output/monthly-recap"
+          python3 scripts/run_skill.py monthly-recap \
+            --month "${{ steps.resolve.outputs.month }}"
 
       - name: Open pull request with recap
         uses: peter-evans/create-pull-request@v6
@@ -52,8 +55,6 @@ jobs:
           title: "recap: ${{ steps.resolve.outputs.month }} monthly recap"
           body: |
             ## Monthly Recap — ${{ steps.resolve.outputs.month }}
-
-            **Language**: `${{ inputs.output_language || 'chinese' }}`
 
             Auto-generated from all snippets in `references/snippets/` matching
             prefix `${{ steps.resolve.outputs.month }}`.

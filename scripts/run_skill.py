@@ -29,6 +29,13 @@ import sys
 from datetime import date
 from pathlib import Path
 
+# Load .env if present (local development)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 import llm
 
 from fetcher import fetch_all, FetchResult
@@ -57,7 +64,7 @@ OUTPUT_DIRS = {
 }
 
 # Marker used to embed machine-readable metadata inside the PR description
-METADATA_MARKER = "<!-- POLKADOT_CONTENT_METADATA"
+METADATA_MARKER = "<!-- CONTENT_METADATA"
 
 
 # ── Article type inference ───────────────────────────────────────────────────
@@ -96,7 +103,7 @@ def infer_article_type(intent: str, urls: list[str]) -> str:
 # ── Outline generation (Phase 1) ─────────────────────────────────────────────
 
 OUTLINE_SYSTEM = """
-You are a Polkadot content strategist producing an English article outline.
+You are a content strategist producing an English article outline.
 The full article will be written in Chinese later — this outline is for an
 English-speaking editor to review and approve the direction before writing begins.
 Keep the outline in English. Be specific and opinionated.
